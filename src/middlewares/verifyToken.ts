@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { expiration, secret } from '~/constants'
+import { TypeSecret } from '~/constants'
 export const authMiddleware = async (req: any) => {
   let token = req.body.token || req.query.token || req.headers.authorization
   if (req.headers.authorization) {
@@ -11,7 +11,7 @@ export const authMiddleware = async (req: any) => {
   }
 
   try {
-    const userData = jwt.verify(token, secret, { maxAge: expiration })
+    const userData = jwt.verify(token, TypeSecret.SECRET_KEY, { maxAge: TypeSecret.EXPIRIED })
     req.user = userData
   } catch {
     console.log('Invalid token')

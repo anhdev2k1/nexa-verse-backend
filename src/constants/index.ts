@@ -1,2 +1,4 @@
-export const secret = 'nexa-verse-anhdev2k1'
-export const expiration = '2h'
+export enum TimeExpired {
+  ACCESS_EXPIRED = '30m',
+  REFRESH_EXPIRED = '7d'
+}
