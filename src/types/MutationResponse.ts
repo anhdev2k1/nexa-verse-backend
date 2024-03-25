@@ -3,9 +3,9 @@ import { Field, Int, InterfaceType } from 'type-graphql'
 @InterfaceType()
 export class MutationResponse {
   @Field()
-  status: string
+  message: string
   @Field((type) => Int)
-  status_code: number
-  @Field({ nullable: true })
-  message?: string
+  statusCode: number
+  @Field()
+  status?: string
 }

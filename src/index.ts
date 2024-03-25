@@ -6,6 +6,7 @@ import cors from 'cors'
 import './configs/db'
 import { buildSchema } from 'type-graphql'
 import { UserResolver } from './resolvers/user.resolve'
+import { refreshTokenRouter } from './routes/refreshtoken.route'
 
 dotenv.config()
 
@@ -16,6 +17,8 @@ app.use(cors())
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+app.use('/api', refreshTokenRouter)
 
 const startApolloServer = async () => {
   const server = new ApolloServer({
