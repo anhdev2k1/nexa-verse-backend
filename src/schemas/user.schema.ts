@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb'
 import { Field, ID, Int, ObjectType } from 'type-graphql'
 
 @ObjectType()
@@ -14,21 +15,24 @@ export class UserProfile {
   @Field({ nullable: true })
   bio: string
 
-  @Field((type) => Int)
+  @Field(() => Int)
   isDelete: number
 }
 
 @ObjectType()
 export class User {
+  @Field(() => ID)
+  _id?: ObjectId
+
   @Field()
   email: string
 
   @Field()
   password: string
 
-  @Field((type) => UserProfile)
-  user_profile: UserProfile
+  @Field(() => ID)
+  user_profile: ObjectId
 
-  @Field((type) => Int)
+  @Field(() => Int)
   isDelete: number
 }

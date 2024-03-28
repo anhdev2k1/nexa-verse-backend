@@ -38,11 +38,11 @@ const userSchema = new Schema<IUser, IUserModel<IUser>, IUserMethods>(
   }
 )
 
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next()
-  this.password = await bcryptUtil.generatePassword(this.password)
-  next()
-})
+// userSchema.pre('save', async function (next) {
+//   if (!this.isModified('password')) return next()
+//   this.password = await bcryptUtil.generatePassword(this.password)
+//   next()
+// })
 
 userSchema.method('isMatchPassword', async function isMatchPassword(passwordInputed: string) {
   return await bcryptUtil.verifyPasword(passwordInputed, this.password)

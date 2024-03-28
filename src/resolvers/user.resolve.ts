@@ -4,14 +4,13 @@ import { Arg, Args, ArgsType, Ctx, Field, Mutation, Query, Resolver } from 'type
 import { ISendResToClient, IUserDoc, UserMutationResponse } from '~/types/User'
 
 import { Response } from 'express'
-import { Context, IResultRes, getInfodata } from '~/shared/app.type'
+import { Context, getInfodata } from '~/shared/app.type'
 import { sendAccessTokenToCookie, sendRefreshTokenToCookie } from '~/utils/cookie.util'
 import { User, UserProfile } from '~/models/user.model'
 import { BadRequestError, NotFoundError } from '~/responseHandler/error.response'
 import { performTransaction } from '~/utils/performTransaction'
-import { User as IUser } from '~/schemas/user.schema'
 import { FieldToken } from '~/constants'
-import { OK } from '~/responseHandler/success.response'
+import { BAD_REQUEST, CREATED, OK } from '~/responseHandler/base.response'
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 @ArgsType()
@@ -41,38 +40,40 @@ export class UserResolver {
     return 'Hello, World!'
   }
   @Mutation((_return) => UserMutationResponse)
-  async googleAuth(@Arg('idToken', (type) => String) idToken: string): Promise<UserMutationResponse> {
+  async googleAuth(@Arg('idToken', () => String) idToken: string, @Ctx() { res }: Context) {
     try {
-      const user_info = (await client.verifyIdToken({
-        idToken: idToken,
-        audience: client._clientId
-      })) as any
+      const user_info = (
+        await client.verifyIdToken({
+          idToken: idToken,
+          audience: client._clientId
+        })
+      ).getPayload()
 
-      let user = await User.findByEmail({ email: user_info.email })
+      let user = await User.findByEmail({ email: user_info?.email as string })
       if (!user) {
-        const userProfile = await UserProfile.create({ full_name: user_info.name })
+        const userProfile = await UserProfile.create({ full_name: user_info?.name, picture: user_info?.picture })
         user = await User.create({
-          email: user_info.email,
-          password: user_info.password,
-          user_profile: userProfile._id.toString()
+          email: user_info?.email,
+          user_profile: userProfile._id
         })
       }
-      return {
-        status: 'success',
+
+      const result = this.sendResToClient({ Doc: user, fields: ['email', 'user_profile'] }, res)
+      return new OK({
         statusCode: 200,
-        message: 'Auth Successfully'
-      }
-    } catch (error) {
-      return {
-        status: 'error',
-        statusCode: 400,
-        message: 'Auth Failed'
-      }
+        message: 'Sign in with Google was successfully!',
+        metadata: result.user
+      })
+    } catch (error: any) {
+      return new BAD_REQUEST({
+        message: error.message,
+        metadata: null
+      })
     }
   }
 
-  @Mutation(() => IUser)
-  async signIn(@Args() { email, password }: SigninParams, res: Response) {
+  @Mutation((_return) => UserMutationResponse)
+  async signIn(@Args() { email, password }: SigninParams, @Ctx() { res }: Context) {
     try {
       const foundUser = await User.findByEmail({ email })
 
@@ -81,65 +82,100 @@ export class UserResolver {
       const isMatchPassword = await foundUser.isMatchPassword(password)
       if (!isMatchPassword) throw new BadRequestError('Password is not correct')
 
-      return this.sendResToClient({ Doc: foundUser, fields: ['_id', 'email', 'user_profile'] }, res)
+      const result = this.sendResToClient({ Doc: foundUser, fields: ['email', 'user_profile'] }, res)
+      return new OK({
+        status: 'success',
+        statusCode: 200,
+        message: 'Sign in was successfully!',
+        metadata: result.user
+      })
     } catch (error: any) {
-      throw new error()
+      return new BAD_REQUEST({
+        message: error.message,
+        metadata: null
+      })
     }
   }
 
-  @Mutation(() => IUser)
-  async signUp(@Args() { full_name, email, password }: SignUpParams, res: Response) {
-    return await performTransaction(async (session) => {
-      const foundUser = await User.findByEmail({ email })
+  @Mutation((_return) => UserMutationResponse)
+  async signUp(@Args() { full_name, email, password }: SignUpParams, @Ctx() { res }: Context) {
+    try {
+      const result = (await performTransaction(async (session) => {
+        const foundUser = await User.findByEmail({ email })
 
-      if (foundUser) throw new BadRequestError('User is already registered')
+        if (foundUser) throw new BadRequestError('User is already registered')
 
-      const [newUserProfile] = await UserProfile.create([{ full_name }], { session })
+        const [newUserProfile] = await UserProfile.create([{ full_name }], { session })
 
-      const [newUser] = await User.create(
-        [
-          {
-            email,
-            password,
-            user_profile: newUserProfile._id.toString()
-          }
-        ],
-        { session }
+        const [newUser] = await User.create(
+          [
+            {
+              email,
+              password,
+              user_profile: newUserProfile._id
+            }
+          ],
+          { session }
+        )
+
+        return this.sendResToClient({ Doc: newUser, fields: ['_id', 'email', 'user_profile'] }, res)
+      })) as any
+      return new CREATED({
+        status: 'success',
+        message: 'Sign up was successfully!',
+        metadata: result.user
+      })
+    } catch (error: any) {
+      return new BAD_REQUEST({
+        message: error.message,
+        metadata: null
+      }).send(res)
+    }
+  }
+
+  @Mutation((_return) => UserMutationResponse)
+  async getMe(@Ctx() context: Context) {
+    const { user, res } = context
+    try {
+      const foundUser = await User.findOne({ email: user.email })
+      if (!foundUser) throw new NotFoundError('User is not exist')
+
+      const result = this.sendResToClient<IUserDoc>(
+        {
+          Doc: foundUser,
+          fields: ['_id', 'email', 'user_profile']
+        },
+        res
       )
-
-      return this.sendResToClient({ Doc: newUser, fields: ['_id', 'email', 'user_profile'] }, res)
-    })
+      return new OK({
+        status: 'success',
+        message: 'Get current user was successfully!',
+        metadata: result,
+        statusCode: 200
+      }).send(res)
+    } catch (error: any) {
+      return new BAD_REQUEST({
+        message: error.message,
+        metadata: null
+      })
+    }
   }
 
-  @Mutation(() => IUser)
-  async getMe(@Ctx() context: Context, res: Response) {
-    const { user } = context
-    const foundUser = await User.findOne({ email: user.email })
-    if (!foundUser) throw new NotFoundError('User is not exist')
-
-    return this.sendResToClient<IUserDoc>(
-      {
-        Doc: foundUser,
-        fields: ['_id', 'email', 'user_profile']
-      },
-      res
-    )
-  }
-
-  @Mutation(() => IResultRes)
+  @Mutation((_return) => UserMutationResponse)
   async Logout(res: Response) {
     res.clearCookie(FieldToken.ACCESS_TOKEN)
     res.clearCookie(FieldToken.REFRESH_TOKEN)
 
     return new OK({
+      status: 'success',
       message: 'Logout was successfully!',
       metadata: null,
       statusCode: 200
     }).send(res)
   }
 
-  async sendResToClient<T extends IUserDoc>({ Doc, fields }: ISendResToClient<T>, res: Response) {
-    const { accessToken, accessTokenLifeTime, refreshToken, refreshTokenLifeTime } = await Doc.generateTokens()
+  sendResToClient<T extends IUserDoc>({ Doc, fields }: ISendResToClient<T>, res: Response) {
+    const { accessToken, accessTokenLifeTime, refreshToken, refreshTokenLifeTime } = Doc.generateTokens()
 
     sendAccessTokenToCookie(res, accessToken, accessTokenLifeTime)
     sendRefreshTokenToCookie(res, refreshToken, refreshTokenLifeTime)

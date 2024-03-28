@@ -8,10 +8,12 @@ import { MutationResponse } from './MutationResponse'
 export class UserMutationResponse implements MutationResponse {
   message: string
   status?: string
+
+  @Field(() => Int)
   statusCode: number
 
   @Field({ nullable: true })
-  user?: User
+  metadata?: User
 }
 
 export interface IGenerateTokensResult {
@@ -23,7 +25,7 @@ export interface IGenerateTokensResult {
 
 export interface IUserMethods {
   isMatchPassword(passwordInputed: string): Promise<boolean>
-  generateTokens(): Promise<IGenerateTokensResult>
+  generateTokens(): IGenerateTokensResult
 }
 
 export type IUserDoc = Doc<User, IUserMethods>
