@@ -113,3 +113,15 @@ export class FORBIDDEN extends BaseResponse {
     super({ message, statusCode, reasonStatusCode, metadata, status })
   }
 }
+
+export class CONFLICT_REQUEST extends BaseResponse {
+  constructor({
+    message,
+    statusCode = StatusCodes.CONFLICT,
+    reasonStatusCode = ReasonPhrases.CONFLICT,
+    metadata,
+    status = 'error'
+  }: IResultRes) {
+    super({ message, statusCode, reasonStatusCode, metadata, status })
+  }
+}

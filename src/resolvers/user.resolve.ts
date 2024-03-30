@@ -11,6 +11,8 @@ import { BadRequestError, NotFoundError } from '~/responseHandler/error.response
 import { performTransaction } from '~/utils/performTransaction'
 import { FieldToken } from '~/constants'
 import { BAD_REQUEST, CREATED, OK } from '~/responseHandler/base.response'
+import { bcryptUtil } from '~/utils/bcrypt.util'
+import throwCustomError, { ErrorTypes } from '~/helpers/error-handler.helper'
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 @ArgsType()
@@ -35,130 +37,108 @@ class SignUpParams implements SigninParams {
 }
 @Resolver()
 export class UserResolver {
-  @Query((_returns) => String)
-  hello(): string {
-    return 'Hello, World!'
+  @Query((_returns) => [UserMutationResponse])
+  async getUsers() {
+    return await User.find({})
   }
+
+  @Query((_returns) => UserMutationResponse)
+  async getUser(@Arg('user_id') user_id: string) {
+    return await User.find({ _id: user_id })
+  }
+
   @Mutation((_return) => UserMutationResponse)
   async googleAuth(@Arg('idToken', () => String) idToken: string, @Ctx() { res }: Context) {
-    try {
-      const user_info = (
-        await client.verifyIdToken({
-          idToken: idToken,
-          audience: client._clientId
-        })
-      ).getPayload()
-
-      let user = await User.findByEmail({ email: user_info?.email as string })
-      if (!user) {
-        const userProfile = await UserProfile.create({ full_name: user_info?.name, picture: user_info?.picture })
-        user = await User.create({
-          email: user_info?.email,
-          user_profile: userProfile._id
-        })
-      }
-
-      const result = this.sendResToClient({ Doc: user, fields: ['email', 'user_profile'] }, res)
-      return new OK({
-        statusCode: 200,
-        message: 'Sign in with Google was successfully!',
-        metadata: result.user
+    const user_info = (
+      await client.verifyIdToken({
+        idToken: idToken,
+        audience: client._clientId
       })
-    } catch (error: any) {
-      return new BAD_REQUEST({
-        message: error.message,
-        metadata: null
+    ).getPayload()
+
+    let user = await User.findByEmail({ email: user_info?.email as string })
+    if (!user) {
+      const userProfile = await UserProfile.create({ full_name: user_info?.name, picture: user_info?.picture })
+      user = await User.create({
+        email: user_info?.email,
+        user_profile: userProfile._id
       })
     }
+
+    const result = this.sendTokenToClient({ Doc: user, fields: ['email', 'user_profile'] }, res)
+    return new OK({
+      statusCode: 200,
+      message: 'Sign in with Google was successfully!',
+      metadata: result.user
+    })
   }
 
   @Mutation((_return) => UserMutationResponse)
   async signIn(@Args() { email, password }: SigninParams, @Ctx() { res }: Context) {
-    try {
-      const foundUser = await User.findByEmail({ email })
+    const foundUser = await User.findByEmail({ email })
 
-      if (!foundUser) throw new BadRequestError('This user is not registered')
+    if (!foundUser) throwCustomError('This user is not registerd', ErrorTypes.BAD_REQUEST)
 
-      const isMatchPassword = await foundUser.isMatchPassword(password)
-      if (!isMatchPassword) throw new BadRequestError('Password is not correct')
+    const isMatchPassword = await foundUser?.isMatchPassword(password)
+    if (!isMatchPassword) throwCustomError('Password is not correct', ErrorTypes.BAD_REQUEST)
 
-      const result = this.sendResToClient({ Doc: foundUser, fields: ['email', 'user_profile'] }, res)
-      return new OK({
-        status: 'success',
-        statusCode: 200,
-        message: 'Sign in was successfully!',
-        metadata: result.user
-      })
-    } catch (error: any) {
-      return new BAD_REQUEST({
-        message: error.message,
-        metadata: null
-      })
-    }
+    const result = this.sendTokenToClient({ Doc: foundUser!, fields: ['email', 'user_profile'] }, res)
+    return new OK({
+      status: 'success',
+      statusCode: 200,
+      message: 'Sign in was successfully!',
+      metadata: result.user
+    })
   }
 
   @Mutation((_return) => UserMutationResponse)
   async signUp(@Args() { full_name, email, password }: SignUpParams, @Ctx() { res }: Context) {
-    try {
-      const result = (await performTransaction(async (session) => {
-        const foundUser = await User.findByEmail({ email })
+    const result = (await performTransaction(async (session) => {
+      const foundUser = await User.findByEmail({ email })
 
-        if (foundUser) throw new BadRequestError('User is already registered')
+      if (foundUser) throwCustomError('Email is already Registered', ErrorTypes.ALREADY_EXISTS)
 
-        const [newUserProfile] = await UserProfile.create([{ full_name }], { session })
+      const [newUserProfile] = await UserProfile.create([{ full_name }], { session })
 
-        const [newUser] = await User.create(
-          [
-            {
-              email,
-              password,
-              user_profile: newUserProfile._id
-            }
-          ],
-          { session }
-        )
-
-        return this.sendResToClient({ Doc: newUser, fields: ['_id', 'email', 'user_profile'] }, res)
-      })) as any
-      return new CREATED({
-        status: 'success',
-        message: 'Sign up was successfully!',
-        metadata: result.user
-      })
-    } catch (error: any) {
-      return new BAD_REQUEST({
-        message: error.message,
-        metadata: null
-      }).send(res)
-    }
+      const hashPassword = await bcryptUtil.generatePassword(password)
+      const [newUser] = await User.create(
+        [
+          {
+            email,
+            password: hashPassword,
+            user_profile: newUserProfile._id
+          }
+        ],
+        { session }
+      )
+      return this.sendTokenToClient({ Doc: newUser, fields: ['_id', 'email', 'user_profile'] }, res)
+    })) as any
+    return new CREATED({
+      status: 'success',
+      message: 'Sign up was successful!',
+      metadata: result.user
+    })
   }
 
   @Mutation((_return) => UserMutationResponse)
   async getMe(@Ctx() context: Context) {
     const { user, res } = context
-    try {
-      const foundUser = await User.findOne({ email: user.email })
-      if (!foundUser) throw new NotFoundError('User is not exist')
+    const foundUser = await User.findOne({ email: user.email })
+    if (!foundUser) throwCustomError('User is not exits', ErrorTypes.BAD_REQUEST)
 
-      const result = this.sendResToClient<IUserDoc>(
-        {
-          Doc: foundUser,
-          fields: ['_id', 'email', 'user_profile']
-        },
-        res
-      )
-      return new OK({
-        status: 'success',
-        message: 'Get current user was successfully!',
-        metadata: result,
-        statusCode: 200
-      }).send(res)
-    } catch (error: any) {
-      return new BAD_REQUEST({
-        message: error.message,
-        metadata: null
-      })
-    }
+    const result = this.sendTokenToClient<IUserDoc>(
+      {
+        Doc: foundUser!,
+        fields: ['_id', 'email', 'user_profile']
+      },
+      res
+    )
+    return new OK({
+      status: 'success',
+      message: 'Get current user was successfully!',
+      metadata: result,
+      statusCode: 200
+    })
   }
 
   @Mutation((_return) => UserMutationResponse)
@@ -171,10 +151,10 @@ export class UserResolver {
       message: 'Logout was successfully!',
       metadata: null,
       statusCode: 200
-    }).send(res)
+    })
   }
 
-  sendResToClient<T extends IUserDoc>({ Doc, fields }: ISendResToClient<T>, res: Response) {
+  sendTokenToClient<T extends IUserDoc>({ Doc, fields }: ISendResToClient<T>, res: Response) {
     const { accessToken, accessTokenLifeTime, refreshToken, refreshTokenLifeTime } = Doc.generateTokens()
 
     sendAccessTokenToCookie(res, accessToken, accessTokenLifeTime)
