@@ -3,6 +3,9 @@ import { Field, ID, Int, ObjectType } from 'type-graphql'
 
 @ObjectType()
 export class UserProfile {
+  @Field(() => ID)
+  _id?: ObjectId
+
   @Field()
   full_name: string
 
@@ -30,8 +33,8 @@ export class User {
   @Field()
   password: string
 
-  @Field(() => ID)
-  user_profile: ObjectId
+  @Field(() => UserProfile)
+  user_profile: UserProfile
 
   @Field(() => Int)
   isDelete: number

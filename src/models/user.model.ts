@@ -48,7 +48,7 @@ userSchema.method('isMatchPassword', async function isMatchPassword(passwordInpu
   return await bcryptUtil.verifyPasword(passwordInputed, this.password)
 })
 
-userSchema.method('generateTokens', async function generateTokens() {
+userSchema.method('generateTokens', function generateTokens() {
   const payload: { user_id: string; email: string } = {
     user_id: this._id.toString(),
     email: this.email
@@ -79,7 +79,7 @@ userSchema.static(
       isDelete: 1
     }
   }: IFindByEmailParams) {
-    return this.findOne({ email }).select(selectOptions)
+    return this.findOne({ email }).select(selectOptions).populate('user_profile').lean()
   }
 )
 

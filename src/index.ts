@@ -12,6 +12,7 @@ import { refreshTokenRouter } from './routes/refreshtoken.route'
 import http from 'http'
 import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core'
 import { Server } from 'socket.io'
+import context from './middlewares/verifyToken'
 dotenv.config()
 
 const PORT = process.env.PORT || 8080
@@ -50,7 +51,7 @@ const startApolloServer = async () => {
       validate: false,
       resolvers: [UserResolver]
     }),
-    context: ({ req, res }) => ({ req, res }),
+    context: context,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
     introspection: true
   })

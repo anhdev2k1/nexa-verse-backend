@@ -113,10 +113,11 @@ export class UserResolver {
       )
       return this.sendTokenToClient({ Doc: newUser, fields: ['_id', 'email', 'user_profile'] }, res)
     })) as any
+
     return new CREATED({
       status: 'success',
       message: 'Sign up was successful!',
-      metadata: result.user
+      metadata: result
     })
   }
 
@@ -142,7 +143,7 @@ export class UserResolver {
   }
 
   @Mutation((_return) => UserMutationResponse)
-  async Logout(res: Response) {
+  async logOut(res: Response) {
     res.clearCookie(FieldToken.ACCESS_TOKEN)
     res.clearCookie(FieldToken.REFRESH_TOKEN)
 
@@ -159,12 +160,13 @@ export class UserResolver {
 
     sendAccessTokenToCookie(res, accessToken, accessTokenLifeTime)
     sendRefreshTokenToCookie(res, refreshToken, refreshTokenLifeTime)
-
     return {
       user: getInfodata({
         fields,
         object: Doc
-      })
+      }),
+      access_token: accessToken,
+      refresh_token: refreshToken
     }
   }
 }

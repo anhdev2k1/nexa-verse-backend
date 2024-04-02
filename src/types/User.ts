@@ -4,6 +4,17 @@ import { Model } from 'mongoose'
 import { Doc, SelectOptions } from '~/shared/app.type'
 import { MutationResponse } from './MutationResponse'
 
+@ObjectType()
+export class UserWithToken {
+  @Field(() => User)
+  user: User
+
+  @Field({ nullable: true })
+  access_token: string
+
+  @Field({ nullable: true })
+  refresh_token: string
+}
 @ObjectType({ implements: MutationResponse })
 export class UserMutationResponse implements MutationResponse {
   message: string
@@ -13,7 +24,7 @@ export class UserMutationResponse implements MutationResponse {
   statusCode: number
 
   @Field({ nullable: true })
-  metadata?: User
+  metadata?: UserWithToken
 }
 
 export interface IGenerateTokensResult {
