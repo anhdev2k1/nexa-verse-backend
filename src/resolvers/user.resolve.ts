@@ -7,12 +7,14 @@ import { Response } from 'express'
 import { Context, getInfodata } from '~/shared/app.type'
 import { sendAccessTokenToCookie, sendRefreshTokenToCookie } from '~/utils/cookie.util'
 import { User, UserProfile } from '~/models/user.model'
-import { BadRequestError, NotFoundError } from '~/responseHandler/error.response'
 import { performTransaction } from '~/utils/performTransaction'
 import { FieldToken } from '~/constants'
-import { BAD_REQUEST, CREATED, OK } from '~/responseHandler/base.response'
+import { CREATED, OK } from '~/responseHandler/base.response'
 import { bcryptUtil } from '~/utils/bcrypt.util'
 import throwCustomError, { ErrorTypes } from '~/helpers/error-handler.helper'
+import RefreshToken, { IRefreshToken } from '~/models/auth.model'
+import db from '~/configs/db'
+import { verifyRefreshToken } from '~/utils/jwt.util'
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 @ArgsType()
@@ -47,6 +49,29 @@ export class UserResolver {
     return await User.find({ _id: user_id })
   }
 
+  @Query((_return) => UserMutationResponse)
+  async getMe(@Ctx() context: Context) {
+    const { user, res } = context
+    const foundUser = await User.findOne({ email: user.email })
+    if (!foundUser) throwCustomError('User is not exits', ErrorTypes.BAD_REQUEST)
+
+    const authTokenField = foundUser!.generateTokens()
+    const result = this.sendTokenToClient<IUserDoc>(
+      {
+        Doc: foundUser!,
+        fields: ['_id', 'email', 'user_profile'],
+        authTokenField
+      },
+      res
+    )
+    return new OK({
+      status: 'success',
+      message: 'Get current user was successfully!',
+      metadata: result,
+      statusCode: 200
+    })
+  }
+
   @Mutation((_return) => UserMutationResponse)
   async googleAuth(@Arg('idToken', () => String) idToken: string, @Ctx() { res }: Context) {
     const user_info = (
@@ -64,12 +89,34 @@ export class UserResolver {
         user_profile: userProfile._id
       })
     }
-
-    const result = this.sendTokenToClient({ Doc: user, fields: ['email', 'user_profile'] }, res)
+    const authTokenField = user.generateTokens()
+    const result = this.sendTokenToClient({ Doc: user, fields: ['email', 'user_profile'], authTokenField }, res)
     return new OK({
       statusCode: 200,
       message: 'Sign in with Google was successfully!',
-      metadata: result.user
+      metadata: result
+    })
+  }
+
+  @Mutation((_return) => UserMutationResponse)
+  async checkRefreshToken(@Arg('refreshToken', () => String) refreshToken: string, @Ctx() { res }: Context) {
+    const foundRefreshToken = await RefreshToken.findOne({ token: refreshToken })
+    console.log(refreshToken)
+
+    if (!foundRefreshToken) throwCustomError('RefreshToken is not valid!', ErrorTypes.BAD_REQUEST)
+
+    const userVerified = verifyRefreshToken(refreshToken) as any
+
+    const foundUser = await User.findOne({ email: userVerified?.email })
+
+    if (!foundUser) throwCustomError('User is not valid!', ErrorTypes.BAD_REQUEST)
+
+    const authTokenField = foundUser!.generateTokens()
+    const result = this.sendTokenToClient({ Doc: foundUser!, fields: ['email', 'user_profile'], authTokenField }, res)
+    return new OK({
+      statusCode: 200,
+      message: 'Sign in with Google was successfully!',
+      metadata: result
     })
   }
 
@@ -82,12 +129,13 @@ export class UserResolver {
     const isMatchPassword = await foundUser?.isMatchPassword(password)
     if (!isMatchPassword) throwCustomError('Password is not correct', ErrorTypes.BAD_REQUEST)
 
-    const result = this.sendTokenToClient({ Doc: foundUser!, fields: ['email', 'user_profile'] }, res)
+    const authTokenField = foundUser!.generateTokens()
+    const result = this.sendTokenToClient({ Doc: foundUser!, fields: ['email', 'user_profile'], authTokenField }, res)
     return new OK({
       status: 'success',
       statusCode: 200,
       message: 'Sign in was successfully!',
-      metadata: result.user
+      metadata: result
     })
   }
 
@@ -111,34 +159,21 @@ export class UserResolver {
         ],
         { session }
       )
-      return this.sendTokenToClient({ Doc: newUser, fields: ['_id', 'email', 'user_profile'] }, res)
+
+      const authTokenField = newUser.generateTokens()
+      const newRefreshToken: IRefreshToken = {
+        token: authTokenField.refreshToken,
+        user_id: newUser._id
+      }
+      await RefreshToken.create(newRefreshToken)
+
+      return this.sendTokenToClient({ Doc: newUser, fields: ['_id', 'email', 'user_profile'], authTokenField }, res)
     })) as any
 
     return new CREATED({
       status: 'success',
       message: 'Sign up was successful!',
       metadata: result
-    })
-  }
-
-  @Mutation((_return) => UserMutationResponse)
-  async getMe(@Ctx() context: Context) {
-    const { user, res } = context
-    const foundUser = await User.findOne({ email: user.email })
-    if (!foundUser) throwCustomError('User is not exits', ErrorTypes.BAD_REQUEST)
-
-    const result = this.sendTokenToClient<IUserDoc>(
-      {
-        Doc: foundUser!,
-        fields: ['_id', 'email', 'user_profile']
-      },
-      res
-    )
-    return new OK({
-      status: 'success',
-      message: 'Get current user was successfully!',
-      metadata: result,
-      statusCode: 200
     })
   }
 
@@ -155,8 +190,8 @@ export class UserResolver {
     })
   }
 
-  sendTokenToClient<T extends IUserDoc>({ Doc, fields }: ISendResToClient<T>, res: Response) {
-    const { accessToken, accessTokenLifeTime, refreshToken, refreshTokenLifeTime } = Doc.generateTokens()
+  sendTokenToClient<T extends IUserDoc>({ Doc, fields, authTokenField }: ISendResToClient<T>, res: Response) {
+    const { accessToken, accessTokenLifeTime, refreshToken, refreshTokenLifeTime } = authTokenField
 
     sendAccessTokenToCookie(res, accessToken, accessTokenLifeTime)
     sendRefreshTokenToCookie(res, refreshToken, refreshTokenLifeTime)

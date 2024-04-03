@@ -2,15 +2,14 @@ import throwCustomError, { ErrorTypes } from '~/helpers/error-handler.helper'
 import { verifyAccessToken } from '~/utils/jwt.util'
 import { Request, Response } from 'express'
 
-const getUser = async (token: string) => {
-  try {
-    if (token) {
+const getUser = (token: string) => {
+  if (token) {
+    try {
       const user = verifyAccessToken(token)
       return user
+    } catch (error) {
+      return null
     }
-    return null
-  } catch (error) {
-    return null
   }
 }
 
@@ -29,12 +28,12 @@ const context = async ({ req, res }: { req: Request; res: Response }) => {
     token = token.split(' ')[1]
   }
 
-  const user = await getUser(token)
+  const user = getUser(token)
 
   if (!user) {
     throwCustomError('User is not Authenticated', ErrorTypes.UNAUTHENTICATED)
   }
-  return { user }
+  return { user, res }
 }
 
 export default context

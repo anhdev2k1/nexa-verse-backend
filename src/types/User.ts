@@ -46,6 +46,7 @@ export type IUserDoc = Doc<User, IUserMethods>
 export interface ISendResToClient<T extends IUserDoc> {
   Doc: NonNullable<T>
   fields: string[]
+  authTokenField: IGenerateTokensResult
 }
 
 export interface IFindByEmailParams {
