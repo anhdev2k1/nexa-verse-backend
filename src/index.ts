@@ -8,7 +8,6 @@ import cors from 'cors'
 import './configs/db'
 import { buildSchema } from 'type-graphql'
 import { UserResolver } from './resolvers/user.resolve'
-import { refreshTokenRouter } from './routes/refreshtoken.route'
 import http from 'http'
 import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core'
 import { Server } from 'socket.io'
@@ -23,8 +22,6 @@ app.use(cors({ credentials: true }))
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-
-app.use('/api', refreshTokenRouter)
 
 //@Create socket server
 const io = new Server(httpServer, {

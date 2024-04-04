@@ -4,7 +4,7 @@ import { Arg, Args, ArgsType, Ctx, Field, Mutation, Query, Resolver } from 'type
 import { ISendResToClient, IUserDoc, UserMutationResponse } from '~/types/User'
 
 import { Response } from 'express'
-import { Context, getInfodata } from '~/shared/app.type'
+import { Context, JWTResponse, getInfodata } from '~/shared/app.type'
 import { sendAccessTokenToCookie, sendRefreshTokenToCookie } from '~/utils/cookie.util'
 import { User, UserProfile } from '~/models/user.model'
 import { performTransaction } from '~/utils/performTransaction'
@@ -15,6 +15,7 @@ import throwCustomError, { ErrorTypes } from '~/helpers/error-handler.helper'
 import RefreshToken, { IRefreshToken } from '~/models/auth.model'
 import db from '~/configs/db'
 import { verifyRefreshToken } from '~/utils/jwt.util'
+import { JwtPayload } from 'jsonwebtoken'
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 @ArgsType()
@@ -101,15 +102,17 @@ export class UserResolver {
   @Mutation((_return) => UserMutationResponse)
   async checkRefreshToken(@Arg('refreshToken', () => String) refreshToken: string, @Ctx() { res }: Context) {
     const foundRefreshToken = await RefreshToken.findOne({ token: refreshToken })
-    console.log(refreshToken)
 
-    if (!foundRefreshToken) throwCustomError('RefreshToken is not valid!', ErrorTypes.BAD_REQUEST)
+    if (!foundRefreshToken) throwCustomError('RefreshToken is not valid!', ErrorTypes.UNAUTHENTICATED)
 
-    const userVerified = verifyRefreshToken(refreshToken) as any
+    const userVerified = verifyRefreshToken(refreshToken) as JWTResponse
 
-    const foundUser = await User.findOne({ email: userVerified?.email })
+    // if (Number(userVerified.exp) < new Date().getTime()) {
+    //   res.redirect('/signin')
+    // }
+    const foundUser = await User.findOne({ email: userVerified.email })
 
-    if (!foundUser) throwCustomError('User is not valid!', ErrorTypes.BAD_REQUEST)
+    if (!foundUser) throwCustomError('User is not valid!', ErrorTypes.UNAUTHENTICATED)
 
     const authTokenField = foundUser!.generateTokens()
     const result = this.sendTokenToClient({ Doc: foundUser!, fields: ['email', 'user_profile'], authTokenField }, res)

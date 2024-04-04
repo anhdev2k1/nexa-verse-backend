@@ -18,12 +18,17 @@ const context = async ({ req, res }: { req: Request; res: Response }) => {
     return { req, res }
   }
   // allowing the 'signUp' and 'signIn' queries to pass without giving the token
-  if (req.body.operationName === 'signUp' || req.body.operationName === 'signIn') {
+  if (
+    req.body.operationName === 'signUp' ||
+    req.body.operationName === 'signIn' ||
+    req.body.operationName === 'checkRefreshToken'
+  ) {
     return { req, res }
   }
 
   // get the user token from the headers
   let token = req.body.token || req.query.token || req.headers.authorization
+
   if (req.headers.authorization) {
     token = token.split(' ')[1]
   }

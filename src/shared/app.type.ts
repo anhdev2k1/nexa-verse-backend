@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import { JwtPayload } from 'jsonwebtoken'
 import lodash from 'lodash'
 import { Document } from 'mongoose'
 import { Types } from 'mongoose'
@@ -9,7 +10,10 @@ import { User } from '~/schemas/user.schema'
 export type SelectOptions<T> = {
   [K in keyof T]: number
 }
-
+export interface JWTResponse extends Pick<JwtPayload, 'iat' | 'exp'> {
+  user_id: string
+  email: string
+}
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type Doc<T, K> = (Document<unknown, {}, T> & Omit<T & { _id: Types.ObjectId }, keyof K> & K) | null
 

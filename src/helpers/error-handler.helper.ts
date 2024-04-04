@@ -6,7 +6,7 @@ interface ErrorType {
   errorStatus: number
 }
 
-export const ErrorTypes: Record<string, ErrorType> = {
+export const ErrorTypes = {
   BAD_USER_INPUT: {
     errorCode: ApolloServerErrorCode.BAD_USER_INPUT,
     errorStatus: 400
