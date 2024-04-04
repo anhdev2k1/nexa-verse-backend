@@ -12,16 +12,12 @@ import http from 'http'
 import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core'
 import { Server } from 'socket.io'
 import context from './middlewares/verifyToken'
+import { socketInstance } from './socket'
 dotenv.config()
 
 const PORT = process.env.PORT || 8080
 const app = express() as any
 const httpServer = http.createServer(app)
-
-app.use(cors({ credentials: true }))
-app.use(cookieParser())
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
 
 //@Create socket server
 const io = new Server(httpServer, {
@@ -40,6 +36,14 @@ declare global {
     var __io: Server
   }
 }
+
+app.use(cors({ credentials: true }))
+app.use(cookieParser())
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
+//@Socket instance
+socketInstance()
 
 //@Create apollo server
 const startApolloServer = async () => {

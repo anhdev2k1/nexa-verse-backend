@@ -21,7 +21,8 @@ const context = async ({ req, res }: { req: Request; res: Response }) => {
   if (
     req.body.operationName === 'signUp' ||
     req.body.operationName === 'signIn' ||
-    req.body.operationName === 'checkRefreshToken'
+    req.body.operationName === 'checkRefreshToken' ||
+    req.body.operationName === 'googleAuth'
   ) {
     return { req, res }
   }
