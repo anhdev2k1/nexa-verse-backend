@@ -1,4 +1,4 @@
-import { User, UserProfile } from '~/schemas/user.schema'
+import { User, UserProfile } from '~/modules/user/schemas/user.schema'
 import { Field, Int, ObjectType } from 'type-graphql'
 import { Model } from 'mongoose'
 import { Doc, SelectOptions } from '~/shared/app.type'

@@ -6,16 +6,14 @@ import { ISendResToClient, IUserDoc, UserMutationResponse } from '~/types/User'
 import { Response } from 'express'
 import { Context, JWTResponse, getInfodata } from '~/shared/app.type'
 import { sendAccessTokenToCookie, sendRefreshTokenToCookie } from '~/utils/cookie.util'
-import { User, UserProfile } from '~/models/user.model'
+import { User, UserProfile } from '~/modules/user/models/user.model'
 import { performTransaction } from '~/utils/performTransaction'
 import { FieldToken } from '~/constants'
 import { CREATED, OK } from '~/responseHandler/base.response'
 import { bcryptUtil } from '~/utils/bcrypt.util'
 import throwCustomError, { ErrorTypes } from '~/helpers/error-handler.helper'
-import RefreshToken, { IRefreshToken } from '~/models/auth.model'
-import db from '~/configs/db'
+import RefreshToken, { IRefreshToken } from '~/modules/auth/models/auth.model'
 import { verifyRefreshToken } from '~/utils/jwt.util'
-import { JwtPayload } from 'jsonwebtoken'
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 @ArgsType()
@@ -39,17 +37,7 @@ class SignUpParams implements SigninParams {
   full_name: string
 }
 @Resolver()
-export class UserResolver {
-  @Query((_returns) => [UserMutationResponse])
-  async getUsers() {
-    return await User.find({})
-  }
-
-  @Query(() => UserMutationResponse)
-  async getUser(@Arg('user_id') user_id: string) {
-    return await User.find({ _id: user_id })
-  }
-
+export class AuthResolver {
   @Query((_return) => UserMutationResponse)
   async getMe(@Ctx() context: Context) {
     const { user, res } = context

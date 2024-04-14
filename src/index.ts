@@ -7,12 +7,12 @@ import { ApolloServer } from 'apollo-server-express'
 import cors from 'cors'
 import './configs/db'
 import { buildSchema } from 'type-graphql'
-import { UserResolver } from './resolvers/user.resolve'
 import http from 'http'
 import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core'
 import { Server } from 'socket.io'
 import context from './middlewares/verifyToken'
 import { socketInstance } from './socket'
+import { AuthResolver } from './modules/auth/resolvers/auth.resolve'
 dotenv.config()
 
 const PORT = process.env.PORT || 8080
@@ -50,7 +50,7 @@ const startApolloServer = async () => {
   const server = new ApolloServer({
     schema: await buildSchema({
       validate: false,
-      resolvers: [UserResolver]
+      resolvers: [AuthResolver]
     }),
     context: context,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })]

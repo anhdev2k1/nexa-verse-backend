@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose'
 import validator from 'validator'
 import db from '~/configs/db'
-import { User as IUser, UserProfile as IUserProfile } from '~/schemas/user.schema'
+import { User as IUser, UserProfile as IUserProfile } from '~/modules/user/schemas/user.schema'
 import { IFindByEmailParams, IUserMethods, IUserModel } from '~/types/User'
 import { bcryptUtil } from '~/utils/bcrypt.util'
 import { signAccessToken, signRefreshToken } from '~/utils/jwt.util'

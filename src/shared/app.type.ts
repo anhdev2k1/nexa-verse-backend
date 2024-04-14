@@ -6,7 +6,7 @@ import { Types } from 'mongoose'
 import { Field, Int, InterfaceType } from 'type-graphql'
 import { ReasonPhrases } from '~/responseHandler/reasonPhrases'
 import { StatusCodes } from '~/responseHandler/statusCodes'
-import { User } from '~/schemas/user.schema'
+import { User } from '~/modules/user/schemas/user.schema'
 export type SelectOptions<T> = {
   [K in keyof T]: number
 }
