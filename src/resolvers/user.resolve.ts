@@ -45,7 +45,7 @@ export class UserResolver {
     return await User.find({})
   }
 
-  @Query((_returns) => UserMutationResponse)
+  @Query(() => UserMutationResponse)
   async getUser(@Arg('user_id') user_id: string) {
     return await User.find({ _id: user_id })
   }
@@ -53,8 +53,10 @@ export class UserResolver {
   @Query((_return) => UserMutationResponse)
   async getMe(@Ctx() context: Context) {
     const { user, res } = context
-    const foundUser = await User.findOne({ email: user.email })
+    const foundUser = await User.findOne({ email: user.email }).populate('user_profile')
     if (!foundUser) throwCustomError('User is not exits', ErrorTypes.BAD_REQUEST)
+
+    console.log(foundUser)
 
     const authTokenField = foundUser!.generateTokens()
     const result = this.sendTokenToClient<IUserDoc>(
@@ -84,12 +86,13 @@ export class UserResolver {
 
     let user = await User.findByEmail({ email: user_info?.email as string })
     if (!user) {
-      const userProfile = await UserProfile.create({ full_name: user_info?.name, picture: user_info?.picture })
+      const [userProfile] = await UserProfile.create([{ full_name: user_info?.name, picture: user_info?.picture }])
       user = await User.create({
         email: user_info?.email,
         user_profile: userProfile._id
       })
     }
+
     const authTokenField = user.generateTokens()
     const result = this.sendTokenToClient({ Doc: user, fields: ['email', 'user_profile'], authTokenField }, res)
     return new OK({
@@ -144,6 +147,8 @@ export class UserResolver {
 
   @Mutation((_return) => UserMutationResponse)
   async signUp(@Args() { full_name, email, password }: SignUpParams, @Ctx() { res }: Context) {
+    console.log('abc')
+
     const result = (await performTransaction(async (session) => {
       const foundUser = await User.findByEmail({ email })
 

@@ -10,6 +10,9 @@ export class UserProfile {
   full_name: string
 
   @Field({ nullable: true })
+  picture: string
+
+  @Field({ nullable: true })
   mention: string
 
   @Field({ nullable: true })
@@ -30,7 +33,7 @@ export class User {
   @Field()
   email: string
 
-  @Field()
+  @Field({ nullable: true })
   password: string
 
   @Field(() => UserProfile)

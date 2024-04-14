@@ -20,7 +20,7 @@ const userSchema = new Schema<IUser, IUserModel<IUser>, IUserMethods>(
     },
     password: {
       type: String,
-      required: true,
+      required: false,
       minlength: 8
     },
     user_profile: {
@@ -79,7 +79,7 @@ userSchema.static(
       isDelete: 1
     }
   }: IFindByEmailParams) {
-    return this.findOne({ email }).select(selectOptions).populate('user_profile').lean()
+    return this.findOne({ email }).select(selectOptions).populate('user_profile')
   }
 )
 
@@ -94,6 +94,10 @@ const userProfileSchema = new Schema<IUserProfile>(
       required: true
     },
     avatar: {
+      type: String,
+      required: false
+    },
+    picture: {
       type: String,
       required: false
     },

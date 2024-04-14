@@ -46,6 +46,7 @@
     "google-auth-library": "^9.7.0",
     "graphql": "^15.3.0",
     "graphql-playground-middleware-express": "^1.7.23",
+    "graphql-objectid-scalar": "^1.0.5",
     "graphql-scalars": "^1.23.0",
     "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.2",

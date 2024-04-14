@@ -1,6 +1,7 @@
 import throwCustomError, { ErrorTypes } from '~/helpers/error-handler.helper'
 import { verifyAccessToken } from '~/utils/jwt.util'
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
+import { FieldAction } from '~/constants'
 
 const getUser = (token: string) => {
   if (token) {
