@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { OAuth2Client } from 'google-auth-library'
 import { Arg, Args, ArgsType, Ctx, Field, Mutation, Query, Resolver } from 'type-graphql'
-import { ISendResToClient, IUserDoc, UserMutationResponse } from '~/types/User'
+import { ISendResToClient, IUserDoc } from '~/types/User'
 
 import { Response } from 'express'
 import { Context, JWTResponse, getInfodata } from '~/shared/app.type'
@@ -14,6 +14,8 @@ import { bcryptUtil } from '~/utils/bcrypt.util'
 import throwCustomError, { ErrorTypes } from '~/helpers/error-handler.helper'
 import RefreshToken, { IRefreshToken } from '~/modules/auth/models/auth.model'
 import { verifyRefreshToken } from '~/utils/jwt.util'
+import { getAvatarUrl } from '~/utils/getDefaultAvatar'
+import { UserMutationResponse } from '~/modules/user/schemas/user.schema'
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 @ArgsType()
@@ -142,7 +144,7 @@ export class AuthResolver {
 
       if (foundUser) throwCustomError('Email is already Registered', ErrorTypes.ALREADY_EXISTS)
 
-      const [newUserProfile] = await UserProfile.create([{ full_name }], { session })
+      const [newUserProfile] = await UserProfile.create([{ full_name, picture: getAvatarUrl('avt.jpg') }], { session })
 
       const hashPassword = await bcryptUtil.generatePassword(password)
       const [newUser] = await User.create(

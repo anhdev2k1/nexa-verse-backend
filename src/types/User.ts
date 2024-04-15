@@ -1,31 +1,17 @@
-import { User, UserProfile } from '~/modules/user/schemas/user.schema'
-import { Field, Int, ObjectType } from 'type-graphql'
+import { User } from '~/modules/user/schemas/user.schema'
 import { Model } from 'mongoose'
 import { Doc, SelectOptions } from '~/shared/app.type'
-import { MutationResponse } from './MutationResponse'
+// @ObjectType({ implements: MutationResponse })
+// export class UserMutationResponse implements MutationResponse {
+//   message: string
+//   status?: string
 
-@ObjectType()
-export class UserWithToken {
-  @Field(() => User)
-  user: User
+//   @Field(() => Int)
+//   statusCode: number
 
-  @Field({ nullable: true })
-  access_token: string
-
-  @Field({ nullable: true })
-  refresh_token: string
-}
-@ObjectType({ implements: MutationResponse })
-export class UserMutationResponse implements MutationResponse {
-  message: string
-  status?: string
-
-  @Field(() => Int)
-  statusCode: number
-
-  @Field({ nullable: true })
-  metadata?: UserWithToken
-}
+//   @Field({ nullable: true })
+//   metadata?: UserWithToken
+// }
 
 export interface IGenerateTokensResult {
   accessToken: string

@@ -1,11 +1,11 @@
 /* eslint-disable no-var */
 /* eslint-disable @typescript-eslint/no-namespace */
-import express from 'express'
+import express, { static as static_ } from 'express'
 import dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
 import { ApolloServer } from 'apollo-server-express'
 import cors from 'cors'
-import './configs/db'
+import '~/configs/db'
 import { buildSchema } from 'type-graphql'
 import http from 'http'
 import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core'
@@ -13,6 +13,7 @@ import { Server } from 'socket.io'
 import context from './middlewares/verifyToken'
 import { socketInstance } from './socket'
 import { AuthResolver } from './modules/auth/resolvers/auth.resolve'
+import { WorkspaceResolver } from './modules/workspace/resolvers/workspace.resolve'
 dotenv.config()
 
 const PORT = process.env.PORT || 8080
@@ -42,6 +43,7 @@ app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+app.use('/api/assets/images', static_('./src/assets/images'))
 //@Socket instance
 socketInstance()
 
@@ -50,7 +52,7 @@ const startApolloServer = async () => {
   const server = new ApolloServer({
     schema: await buildSchema({
       validate: false,
-      resolvers: [AuthResolver]
+      resolvers: [AuthResolver, WorkspaceResolver]
     }),
     context: context,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })]

@@ -1,7 +1,9 @@
 import { ObjectId } from 'mongodb'
-import { Field, ID, Int, ObjectType } from 'type-graphql'
+import { ArgsType, Field, ID, Int, ObjectType } from 'type-graphql'
+import { Room } from '~/modules/room/schemas/room.schema'
 import { User } from '~/modules/user/schemas/user.schema'
-
+import { User as IUser } from '~/modules/user/schemas/user.schema'
+import MutationResponse from '~/types/MutationResponse'
 @ObjectType()
 export class Workspace {
   @Field(() => ID)
@@ -19,8 +21,8 @@ export class Workspace {
   @Field({ nullable: true })
   cover: string
 
-  @Field(() => [ID])
-  members: [ObjectId]
+  @Field(() => [IUser])
+  members: IUser[]
 
   @Field()
   link_invite: string
@@ -28,8 +30,8 @@ export class Workspace {
   @Field({ nullable: true })
   description: string
 
-  @Field()
-  rooms: string
+  @Field(() => [Room])
+  rooms: Room[]
 
   @Field({ defaultValue: 'public' })
   status: string
@@ -37,3 +39,21 @@ export class Workspace {
   @Field(() => Int)
   isDelete: number
 }
+
+@ObjectType()
+export class WorkspaceResponse extends MutationResponse(Workspace) {}
+
+@ArgsType()
+export class CreateWorkspaceInput {
+  @Field()
+  name: string
+
+  @Field({ nullable: true })
+  description: string
+
+  @Field({ nullable: true })
+  cover: string
+}
+
+@ArgsType()
+export class UpdateWorkspaceInput extends Workspace {}

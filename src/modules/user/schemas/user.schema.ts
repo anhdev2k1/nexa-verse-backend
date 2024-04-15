@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb'
 import { Field, ID, Int, ObjectType } from 'type-graphql'
+import MutationResponse from '~/types/MutationResponse'
 
 @ObjectType()
 export class UserProfile {
@@ -42,3 +43,17 @@ export class User {
   @Field(() => Int)
   isDelete: number
 }
+
+@ObjectType()
+export class UserWithToken {
+  @Field(() => User)
+  user: User
+
+  @Field({ nullable: true })
+  access_token: string
+
+  @Field({ nullable: true })
+  refresh_token: string
+}
+@ObjectType()
+export class UserMutationResponse extends MutationResponse(UserWithToken) {}
